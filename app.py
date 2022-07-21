@@ -5,7 +5,7 @@ from flask import Flask, render_template, request, flash
 
 app = Flask(__name__)
 app.secret_key = "key"
-app.templates_auto_reload = True
+app.templates_auto_reload = True 
 
 
 @app.route("/")
