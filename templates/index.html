@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Searchify</title>
+    <style>
+        .center {
+            text-align: center;
+        }
+        .searchBar{
+          display: flex;
+          justify-content: center;
+        }
+        button {
+          margin-left: 5px;
+        }
+        body {
+          margin: 0 15%
+        }
+    </style>
+</head>
+<body>
+    <h1 class="center">Weekly News Article Lookup</h1>
+    <form class="searchBar">
+      <input type="text" name="search" id="search" value="{{searchTerm}}">
+      <button type="submit">Search</button>
+    </form>
+    {% for message in get_flashed_messages() %}
+    <p class="center" style="color: red;">{{message}}</p>
+    {% endfor %}
+
+    {% if data %}
+    <ul>
+    {% for row in data%}
+    <li style="margin: 3% 0;"><a href="{{row}}">{{row}}</a></li>
+    {% endfor %}
+    </ul>
+    {% endif %}
+</body>
+
+</html>
+
