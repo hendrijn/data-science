@@ -7,11 +7,16 @@ app = Flask(__name__)
 app.secret_key = "key"
 app.templates_auto_reload = True 
 
+global first
+first = True
 
 @app.route("/")
 def index():
-    createArticles()
-    createIndexes()
+    global first
+    if first:
+        createArticles()
+        createIndexes()
+        first = False
     return loadTemplate()
 
 
