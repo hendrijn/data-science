@@ -37,20 +37,33 @@ def createIndexes():
         # open in readonly mode
         with open(os.path.join(f'{os.getcwd()}/articles', filename), 'r') as f:
             doc = nlp(f.read())
-            for ent in doc.ents:
+            filtered_tokens = [preprocess_token(token) for token in doc if is_token_allowed(token)]
+            for token in filtered_tokens:
                 # add entity and frequency indexes
-                if ent.text in indexes['entity_lookup']:
-                    if count not in indexes['entity_lookup'][ent.text]:
-                        indexes['entity_lookup'][ent.text].append(
+                if token in indexes['entity_lookup']:
+                    if count not in indexes['entity_lookup'][token]:
+                        indexes['entity_lookup'][token].append(
                             count)
-                        indexes['freqency_lookup'][ent.text] += 1
+                        indexes['freqency_lookup'][token] += 1
                 else:
-                    indexes['entity_lookup'][ent.text] = [count]
-                    indexes['freqency_lookup'][ent.text] = 1
+                    indexes['entity_lookup'][token] = [count]
+                    indexes['freqency_lookup'][token] = 1
         count += 1
     export = json.dumps(indexes)
     index.write(export)
     index.close()
+
+
+def is_token_allowed(token):
+     """Only allow valid tokens which are not stop words and punctuation symbols."""
+     if (not token or not token.text.strip() or token.is_stop or token.is_punct):
+         return False
+     return True
+
+
+def preprocess_token(token):
+    # Reduce token to its lowercase lemma form
+    return token.lemma_.strip().lower()
 
 
 def search():
