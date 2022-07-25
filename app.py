@@ -56,7 +56,7 @@ def createIndexes():
     indexes = {
         'doc_lookup': {},
         'entity_lookup': {},
-        'freqency_lookup': {},
+        'frequency_lookup': {},
     }
     count = 0
 
@@ -73,10 +73,10 @@ def createIndexes():
                     if count not in indexes['entity_lookup'][token]:
                         indexes['entity_lookup'][token].append(
                             count)
-                        indexes['freqency_lookup'][token] += 1
+                        indexes['frequency_lookup'][token] += 1
                 else:
                     indexes['entity_lookup'][token] = [count]
-                    indexes['freqency_lookup'][token] = 1
+                    indexes['frequency_lookup'][token] = 1
         count += 1
     export = json.dumps(indexes)
     index.write(export)
@@ -84,10 +84,10 @@ def createIndexes():
 
 
 def is_token_allowed(token):
-    """Only allow valid tokens which are not stop words and punctuation symbols."""
-    if (not token or not token.text.strip() or token.is_stop or token.is_punct):
-        return False
-    return True
+     """Only allow valid tokens which are not stop words and punctuation symbols."""
+     if (not token or not token.text.strip() or token.is_stop or token.is_punct):
+         return False
+     return True
 
 
 def preprocess_token(token):
@@ -100,10 +100,22 @@ def search(term):
     f = open('index.json', 'r')
     j = json.loads(f.read())
     docs = []
-    for entity in j['entity_lookup']:
-        if entity == term:
-            for doc in j['entity_lookup'][entity]:
-                path = (j['doc_lookup'][f'{doc}'])[:-4].replace('_', '/')
-                docs.append(
-                    f'https://www.theguardian.com/{path}')
+    main_term = getLowestFreq(term, j)
+    print(main_term)
+    if(main_term):
+        for doc in j['entity_lookup'][main_term]:
+            path = (j['doc_lookup'][f'{doc}'])[:-4].replace('_', '/')
+            docs.append(
+                f'https://www.theguardian.com/{path}')
     return docs
+
+
+def getLowestFreq(term, j):
+    terms = term.split(' ')
+    lowest_count = 10000
+    lowest_term = None
+    for term in terms:
+        if term in j['frequency_lookup'] and j['frequency_lookup'][term] < lowest_count:
+            lowest_count = j['frequency_lookup'][term]
+            lowest_term = term
+    return lowest_term

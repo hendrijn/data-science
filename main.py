@@ -27,7 +27,7 @@ def createIndexes():
     indexes = {
         'doc_lookup': {},
         'entity_lookup': {},
-        'freqency_lookup': {},
+        'frequency_lookup': {},
     }
     count = 0
 
@@ -44,10 +44,10 @@ def createIndexes():
                     if count not in indexes['entity_lookup'][token]:
                         indexes['entity_lookup'][token].append(
                             count)
-                        indexes['freqency_lookup'][token] += 1
+                        indexes['frequency_lookup'][token] += 1
                 else:
                     indexes['entity_lookup'][token] = [count]
-                    indexes['freqency_lookup'][token] = 1
+                    indexes['frequency_lookup'][token] = 1
         count += 1
     export = json.dumps(indexes)
     index.write(export)
@@ -66,20 +66,31 @@ def preprocess_token(token):
     return token.lemma_.strip().lower()
 
 
-def search():
+def search(term):
     """Given a search term, lookup the entity in the index and get the article files that contain the search."""
-    term = 'the weekend'
     f = open('index.json', 'r')
     j = json.loads(f.read())
     docs = []
-    for entity in j['entity_lookup']:
-        if entity == term:
-            for doc in j['entity_lookup'][entity]:
-                path = (j['doc_lookup'][f'{doc}'])[:-4]
-                print(path)
+    main_term = getLowestFreq(term, j)
+    for doc in j['entity_lookup'][main_term]:
+        path = (j['doc_lookup'][f'{doc}'])[:-4].replace('_', '/')
+        docs.append(
+            f'https://www.theguardian.com/{path}')
+    return docs
+
+
+def getLowestFreq(term, j):
+    terms = term.split(' ')
+    lowest_count = 10000
+    lowest_term = None
+    for term in terms:
+        if term in j['frequency_lookup'] and j['frequency_lookup'][term] < lowest_count:
+            lowest_count = j['frequency_lookup'][term]
+            lowest_term = term
+    return lowest_term
 
 
 if __name__ == "__main__":
-    # createArticles()
-    createIndexes()
-    # search()
+    #createArticles()
+    #createIndexes()
+    search('uk ran')
