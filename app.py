@@ -17,6 +17,19 @@ def index():
         first = False
     return loadTemplate()
 
+@app.route("/article/<title>")
+def read(title):
+    f = open('articles.p', 'rb')
+    j = pickle.load(f)
+    articleInfo = {}
+    title = title.replace('_', ' ')
+    for article in j:
+        if j[article]['webTitle'] == title:
+            articleInfo['title'] = title
+            articleInfo['caption'] = j[article]['caption']
+            articleInfo['body'] = j[article]['bodyText']
+    return render_template("article.html", article=articleInfo)
+
 
 def loadTemplate():
     searchTerm = request.args.get("search")

@@ -3,6 +3,10 @@
   <head>
     <title>Searchify</title>
     <style>
+      a {
+        text-decoration: none;
+        color: black;
+      }
       .center {
         text-align: center;
       }
@@ -76,10 +80,12 @@
       {% endfor %} {% if data %}
       <ul>
         {% for art in data%}
-        <li>
-          <h3>{{data[art]['webTitle']}}</h3>
-          <p>{{data[art]['caption']}}</p>
-        </li>
+        <a href="/article/{{data[art]['webTitle'].replace(' ', '_')}}">
+          <li>
+            <h3>{{data[art]['webTitle']}}</h3>
+            <p>{{data[art]['caption']}}</p>
+          </li>
+        </a>
         {% endfor %}
       </ul>
       {% endif %}
