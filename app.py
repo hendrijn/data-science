@@ -22,11 +22,14 @@ def loadTemplate():
     searchTerm = request.args.get("search")
     isExact = request.args.get("kind")
     isExact = isExact == 'on'
-    print(isExact)
     if searchTerm:
-        data = search(searchTerm.lower(), isExact)
-        if not data:
+        docs = search(searchTerm.lower(), isExact)
+        if not docs:
             flash(f'No matches for {searchTerm}')
+            data=None
+        else:
+            data = getArticleData(docs)
+            for row in data: print(data[row])
     else:
         data = None
         searchTerm = ''
@@ -44,12 +47,16 @@ def apiCall():
     artObj = {}
     articles = open("articles.p", "wb")
     while added:
-        url = f'http://content.guardianapis.com/search?page={page}&page-size=100&from-date={from_string}&to-date={toady_string}&order-by=newest&show-fields=bodyText&api-key=test'
+        url = f'http://content.guardianapis.com/search?page={page}&page-size=100&from-date={from_string}&to-date={toady_string}&order-by=newest&show-fields=bodyText,trailText&api-key=test'
         jsonString = requests.get(url).json()
         if 'results' in jsonString['response']:
             articleArray = jsonString['response']['results']
             for article in articleArray:
-                artObj[article['id']] = article['fields']['bodyText']
+                artObj[article['id']] = {
+                    'webTitle': article['webTitle'],
+                    'caption': article['fields']['trailText'],
+                    'bodyText': article['fields']['bodyText']
+                    }
             page+=1
         else:
             added = False
@@ -75,7 +82,7 @@ def createIndexes():
     for file in full_file:
         # add doc indexes
         indexes['doc_lookup'][doc_id] = file
-        doc = nlp(full_file[file])
+        doc = nlp(full_file[file]['bodyText'])
         for entity in doc.ents:
             # add entity and frequency indexes
             entity = entity.text.strip().lower()
@@ -111,10 +118,8 @@ def search(term, isExact):
     # main_term = getLowestFreq(term, j)
     if term in j['entity_lookup']: #see if the exact term is an entity
         for doc in j['entity_lookup'][term]:
-            print(j['entity_lookup'][term])
-            path = (j['doc_lookup'][doc])
-            docs.append(
-                f'https://www.theguardian.com/{path}')
+            id = (j['doc_lookup'][doc])
+            docs.append(id) 
     elif not isExact:
         print('in nonexact')
         doc = nlp(term)
@@ -127,9 +132,18 @@ def search(term, isExact):
                     all_docs += j['entity_lookup'][key]
         all_docs = [x for x, y in collections.Counter(all_docs).items() if y > 1] #only keeps articles that have multiple hits  
         for doc in all_docs:
-            path = (j['doc_lookup'][doc])
-            docs.append(f'https://www.theguardian.com/{path}')          
+            id = (j['doc_lookup'][doc])
+            docs.append(id)          
     return docs
+
+
+def getArticleData(docs):
+    f = open('articles.p', 'rb')
+    j = pickle.load(f)
+    data = {}
+    for article in docs:
+        data[article] = j[article]
+    return data
 
 
 def getLowestFreq(term, j):

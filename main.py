@@ -12,12 +12,16 @@ def apiCall():
     artObj = {}
     articles = open("articles.p", "wb")
     while added:
-        url = f'http://content.guardianapis.com/search?page={page}&page-size=100&from-date={from_string}&to-date={toady_string}&order-by=newest&show-fields=bodyText&api-key=test'
+        url = f'http://content.guardianapis.com/search?page={page}&page-size=100&from-date={from_string}&to-date={toady_string}&order-by=newest&show-fields=bodyText,trailText&api-key=test'
         jsonString = requests.get(url).json()
         if 'results' in jsonString['response']:
             articleArray = jsonString['response']['results']
             for article in articleArray:
-                artObj[article['id']] = article['fields']['bodyText']
+                artObj[article['id']] = {
+                    'webTitle': article['webTitle'],
+                    'caption': article['fields']['trailText'],
+                    'bodyText': article['fields']['bodyText']
+                    }
             page+=1
         else:
             added = False
@@ -44,7 +48,7 @@ def createIndexes():
     for file in full_file:
         # add doc indexes
         indexes['doc_lookup'][doc_id] = file
-        doc = nlp(full_file[file])
+        doc = nlp(full_file[file]['bodyText'])
         for entity in doc.ents:
             # add entity and frequency indexes
             entity = entity.text.strip().lower()
@@ -74,7 +78,7 @@ def preprocess_token(token):
     return token.lemma_.strip().lower()
 
 
-def search(term):
+def search(term, isExact):
     """Given a search term, lookup the entity in the index and get the article files that contain the search."""
     nlp = spacy.load("en_core_web_sm")  # will use english model
     f = open('index.p', 'rb')
@@ -83,10 +87,10 @@ def search(term):
     # main_term = getLowestFreq(term, j)
     if term in j['entity_lookup']: #see if the exact term is an entity
         for doc in j['entity_lookup'][term]:
-            path = (j['doc_lookup'][doc])
-            docs.append(
-                f'https://www.theguardian.com/{path}')
-    else:
+            id = (j['doc_lookup'][doc])
+            docs.append(id) 
+    elif not isExact:
+        print('in nonexact')
         doc = nlp(term)
         all_docs = []
         tokens = [preprocess_token(token) for token in doc if is_token_allowed(token)]
@@ -97,10 +101,18 @@ def search(term):
                     all_docs += j['entity_lookup'][key]
         all_docs = [x for x, y in collections.Counter(all_docs).items() if y > 1] #only keeps articles that have multiple hits  
         for doc in all_docs:
-            path = (j['doc_lookup'][doc])
-            docs.append(f'https://www.theguardian.com/{path}')          
+            id = (j['doc_lookup'][doc])
+            docs.append(id)          
     return docs
 
+
+def getArticleData(docs):
+    f = open('articles.p', 'rb')
+    j = pickle.load(f)
+    data = {}
+    for article in docs:
+        data[article] = j[article]
+    print(data)
 
 # def getLowestFreq(term, j):
 #     """Reduces the search term to the lowest frequency word. Helpful to improve exact-match searches."""
@@ -125,4 +137,5 @@ if __name__ == "__main__":
     # # print(j['entity_lookup'])
     # for key in j['entity_lookup']:
     #     if len(j['entity_lookup'][key]) > 3: print(key, end=' . ')
-    print(search('uk telecom'))
+    docs = search('the next day', True)
+    getArticleData(docs)

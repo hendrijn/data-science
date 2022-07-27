@@ -34,6 +34,24 @@
       h1 {
         font-family: "Cormorant SC", serif;
       }
+      li {
+        padding: 10px;
+        margin: 10px 0;
+        list-style-type: none;
+        transition: all 0.25s ease-in-out;
+      }
+      li > h3 {
+        color: navy;
+        margin-top: 0px;
+      }
+      li > p {
+        margin: 0 15px;
+      }
+      li:hover {
+        background-color: #edf6f9;
+        border-radius: 10px;
+        transform: scale(1.1);
+      }
     </style>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -57,9 +75,10 @@
       <p class="center" style="color: red">{{message}}</p>
       {% endfor %} {% if data %}
       <ul>
-        {% for row in data%}
-        <li style="margin: 3% 0; list-style-type: none">
-          <a href="{{row}}" target="_blank">{{row}}</a>
+        {% for art in data%}
+        <li>
+          <h3>{{data[art]['webTitle']}}</h3>
+          <p>{{data[art]['caption']}}</p>
         </li>
         {% endfor %}
       </ul>
