@@ -17,17 +17,18 @@ def index():
         first = False
     return loadTemplate()
 
-@app.route("/article/<title>")
-def read(title):
+@app.route("/article/<doc_id>")
+def read(doc_id):
     f = open('articles.p', 'rb')
     j = pickle.load(f)
+    f2 = open('index.p', 'rb')
+    indexes = pickle.load(f2)
     articleInfo = {}
-    title = title.replace('_', ' ')
-    for article in j:
-        if j[article]['webTitle'] == title:
-            articleInfo['title'] = title
-            articleInfo['caption'] = j[article]['caption']
-            articleInfo['body'] = j[article]['bodyText']
+    article_id = indexes['doc_lookup'][int(doc_id)]
+    article = j[article_id]
+    articleInfo['title'] = article['webTitle']
+    articleInfo['caption'] = article['caption']
+    articleInfo['body'] = article['bodyText']
     return render_template("article.html", article=articleInfo)
 
 
@@ -42,7 +43,6 @@ def loadTemplate():
             data=None
         else:
             data = getArticleData(docs)
-            for row in data: print(data[row])
     else:
         data = None
         searchTerm = ''
@@ -99,9 +99,10 @@ def createIndexes():
         for entity in doc.ents:
             # add entity and frequency indexes
             entity = entity.text.strip().lower()
-            if entity in indexes['entity_lookup'] and doc_id not in indexes['entity_lookup'][entity]:
-                indexes['entity_lookup'][entity].append(doc_id)
-                indexes['frequency_lookup'][entity] += 1
+            if entity in indexes['entity_lookup']:
+                if doc_id not in indexes['entity_lookup'][entity]:
+                    indexes['entity_lookup'][entity].append(doc_id)
+                    indexes['frequency_lookup'][entity] += 1
             else:
                 indexes['entity_lookup'][entity] = [doc_id]
                 indexes['frequency_lookup'][entity] = 1
@@ -132,30 +133,47 @@ def search(term, isExact):
     if term in j['entity_lookup']: #see if the exact term is an entity
         for doc in j['entity_lookup'][term]:
             id = (j['doc_lookup'][doc])
-            docs.append(id) 
-    elif not isExact:
-        print('in nonexact')
+            docs.append({'id':id, 'wasEntity':True}) 
+
+    if not isExact:
         doc = nlp(term)
         all_docs = []
         tokens = [preprocess_token(token) for token in doc if is_token_allowed(token)]
         for token in tokens:
-            print(token)
             for key in j['entity_lookup']:
-                if token in key:
-                    all_docs += j['entity_lookup'][key]
-        all_docs = [x for x, y in collections.Counter(all_docs).items() if y > 1] #only keeps articles that have multiple hits  
+                key_tokens = key.split(' ')
+                for key_token in key_tokens:
+                    if token == key_token:
+                        all_docs += j['entity_lookup'][key]
+        if len(tokens) > 1:
+            all_docs = [x for x, y in collections.Counter(all_docs).items() if y > 1] #only keeps articles that have multiple hits  
+        main_doc_ids = [article['id'] for article in docs]
         for doc in all_docs:
             id = (j['doc_lookup'][doc])
-            docs.append(id)          
+            if id not in main_doc_ids:
+                docs.append({'id':id, 'wasEntity':False})          
     return docs
 
 
 def getArticleData(docs):
     f = open('articles.p', 'rb')
-    j = pickle.load(f)
+    articles = pickle.load(f)
+    f2 = open('index.p', 'rb')
+    indexes = pickle.load(f2)
     data = {}
+
+    key_list = list(indexes['doc_lookup'].keys())
+    val_list = list(indexes['doc_lookup'].values())
+
     for article in docs:
-        data[article] = j[article]
+        position = val_list.index(article['id'])
+        data[article['id']] = {
+            'doc_id': key_list[position],
+            'webTitle': articles[article['id']]['webTitle'],
+            'caption': articles[article['id']]['caption'],
+            'bodyText': articles[article['id']]['bodyText'],
+            'wasEntity': article['wasEntity']
+        }
     return data
 
 

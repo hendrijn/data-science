@@ -34,7 +34,6 @@ def createIndexes():
     """
     Reads each article file and generates indexes for each doc, entity, and frequency.
     """
-    start = time.time()
     nlp = spacy.load("en_core_web_sm")  # will use english model
     index = open('index.p', "wb")
     indexes = {
@@ -61,9 +60,6 @@ def createIndexes():
         doc_id += 1
     pickle.dump(indexes, index)
     index.close()
-    end = time.time()
-    print(end-start)
-
 
 
 def is_token_allowed(token):
@@ -84,35 +80,55 @@ def search(term, isExact):
     f = open('index.p', 'rb')
     j = pickle.load(f)
     docs = []
+
+    print(j['entity_lookup']['monkeypox'])
+
     # main_term = getLowestFreq(term, j)
     if term in j['entity_lookup']: #see if the exact term is an entity
         for doc in j['entity_lookup'][term]:
             id = (j['doc_lookup'][doc])
-            docs.append(id) 
-    elif not isExact:
-        print('in nonexact')
+            docs.append({'id':id, 'wasEntity':True}) 
+
+    if not isExact:
         doc = nlp(term)
         all_docs = []
         tokens = [preprocess_token(token) for token in doc if is_token_allowed(token)]
         for token in tokens:
-            print(token)
             for key in j['entity_lookup']:
-                if token in key:
-                    all_docs += j['entity_lookup'][key]
-        all_docs = [x for x, y in collections.Counter(all_docs).items() if y > 1] #only keeps articles that have multiple hits  
+                key_tokens = key.split(' ')
+                for key_token in key_tokens:
+                    if token == key_token:
+                        all_docs += j['entity_lookup'][key]
+        if len(tokens) > 1:
+            all_docs = [x for x, y in collections.Counter(all_docs).items() if y > 1] #only keeps articles that have multiple hits  
+        main_doc_ids = [article['id'] for article in docs]
         for doc in all_docs:
             id = (j['doc_lookup'][doc])
-            docs.append(id)          
+            if id not in main_doc_ids:
+                docs.append({'id':id, 'wasEntity':False})          
     return docs
 
 
 def getArticleData(docs):
     f = open('articles.p', 'rb')
-    j = pickle.load(f)
+    articles = pickle.load(f)
+    f2 = open('index.p', 'rb')
+    indexes = pickle.load(f2)
     data = {}
+
+    key_list = list(indexes['doc_lookup'].keys())
+    val_list = list(indexes['doc_lookup'].values())
+
     for article in docs:
-        data[article] = j[article]
-    print(data)
+        position = val_list.index(article['id'])
+        data[article['id']] = {
+            'doc_id': key_list[position],
+            'webTitle': articles[article['id']]['webTitle'],
+            'caption': articles[article['id']]['caption'],
+            'bodyText': articles[article['id']]['bodyText'],
+            'wasEntity': article['wasEntity']
+        }
+    return data
 
 # def getLowestFreq(term, j):
 #     """Reduces the search term to the lowest frequency word. Helpful to improve exact-match searches."""
@@ -137,5 +153,5 @@ if __name__ == "__main__":
     # # print(j['entity_lookup'])
     # for key in j['entity_lookup']:
     #     if len(j['entity_lookup'][key]) > 3: print(key, end=' . ')
-    docs = search('the next day', True)
-    getArticleData(docs)
+    docs = search('the next day', False)
+    print(getArticleData(docs))

@@ -41,20 +41,31 @@
       li {
         padding: 10px;
         margin: 10px 0;
+        border-radius: 10px;
         list-style-type: none;
         transition: all 0.25s ease-in-out;
       }
       li > h3 {
         color: navy;
         margin-top: 0px;
+        margin-bottom: 0px;
       }
       li > p {
         margin: 0 15px;
+        margin-top: 10px;
       }
       li:hover {
         background-color: #edf6f9;
-        border-radius: 10px;
         transform: scale(1.1);
+      }
+      .exact {
+        border-left: 2px green solid;
+      }
+      .exact-text {
+        margin: 0;
+        margin-top: 10px;
+        font-style: italic;
+        color: green;
       }
     </style>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -80,9 +91,12 @@
       {% endfor %} {% if data %}
       <ul>
         {% for art in data%}
-        <a href="/article/{{data[art]['webTitle'].replace(' ', '_')}}">
-          <li>
+        <a href="/article/{{data[art]['doc_id']}}">
+          <li class="{% if data[art]['wasEntity']%}exact{%endif%}">
             <h3>{{data[art]['webTitle']}}</h3>
+            {% if data[art]['wasEntity']%}
+            <p class="exact-text">Exact match</p>
+            {%endif%}
             <p>{{data[art]['caption']}}</p>
           </li>
         </a>
